@@ -4,13 +4,28 @@ const path = require('path');
 
 const PORT = process.env.PORT || 3000;
 
+const INITIAL_PHOTOS = [
+  {
+    url: 'https://cdn2.thecatapi.com/images/ebv.jpg',
+    width: 176,
+    height: 540,
+  },
+  { url: 'https://picsum.photos/seed/horizon/600/800' },
+  { url: 'https://picsum.photos/seed/moonlit/600/800' },
+];
+
 const feedState = {
-  likes: [],
-  comments: [],
+  photos: INITIAL_PHOTOS.map(photo => ({
+    ...photo,
+    likes: 0,
+    dislikes: 0,
+    comments: [],
+    updatedAt: Date.now(),
+  })),
 };
 
-const MAX_FEED_ITEMS = 100;
-const MAX_COMMENTS = 50;
+const MAX_COMMENTS_PER_PHOTO = 80;
+const MAX_COMMENT_LENGTH = 240;
 
 function readJsonBody(req) {
   return new Promise((resolve, reject) => {
@@ -42,45 +57,79 @@ function sendJson(res, statusCode, data) {
 }
 
 function sanitizeText(text) {
-  return text.replace(/\s+/g, ' ').trim();
+  return text.replace(/\s+/g, ' ').trim().slice(0, MAX_COMMENT_LENGTH);
 }
 
-function addLike(action, photoUrl) {
-  const entry = {
-    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    action,
-    photoUrl,
-    timestamp: new Date().toISOString(),
+function getOrCreatePhoto(photoUrl) {
+  const existing = feedState.photos.find(photo => photo.url === photoUrl);
+  if (existing) return existing;
+
+  const photo = {
+    url: photoUrl,
+    likes: 0,
+    dislikes: 0,
+    comments: [],
+    updatedAt: Date.now(),
   };
-  feedState.likes.push(entry);
-  if (feedState.likes.length > MAX_FEED_ITEMS) {
-    feedState.likes.shift();
+  feedState.photos.push(photo);
+  return photo;
+}
+
+function addReaction(action, photoUrl) {
+  const photo = getOrCreatePhoto(photoUrl || INITIAL_PHOTOS[0].url);
+  if (action === 'dislike') {
+    photo.dislikes += 1;
+  } else {
+    photo.likes += 1;
   }
+  photo.updatedAt = Date.now();
 }
 
 function addComment(text, photoUrl) {
+  const cleanText = sanitizeText(text);
+  if (!cleanText) {
+    throw new Error('Comment text is required.');
+  }
+
+  const photo = getOrCreatePhoto(photoUrl || INITIAL_PHOTOS[0].url);
   const entry = {
     id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    text,
-    photoUrl,
+    text: cleanText,
+    photoUrl: photo.url,
     timestamp: new Date().toISOString(),
   };
-  feedState.comments.push(entry);
-  if (feedState.comments.length > MAX_COMMENTS) {
-    feedState.comments.shift();
+  photo.comments.push(entry);
+  if (photo.comments.length > MAX_COMMENTS_PER_PHOTO) {
+    photo.comments.shift();
   }
+  photo.updatedAt = Date.now();
 }
 
 function getFeed() {
-  const likeCount = feedState.likes.filter(item => item.action === 'like').length;
-  const dislikeCount = feedState.likes.filter(item => item.action === 'dislike').length;
-  const recentComments = [...feedState.comments].reverse().slice(0, 15);
+  const photos = [...feedState.photos]
+    .map(photo => ({
+      ...photo,
+      activity: photo.likes + photo.dislikes + photo.comments.length,
+      comments: [...photo.comments].slice(-5).reverse(),
+    }))
+    .sort((a, b) => {
+      if (b.activity === a.activity) return b.updatedAt - a.updatedAt;
+      return b.activity - a.activity;
+    });
+
+  const totals = photos.reduce(
+    (acc, photo) => {
+      acc.likes += photo.likes;
+      acc.dislikes += photo.dislikes;
+      acc.comments += photo.comments.length;
+      return acc;
+    },
+    { likes: 0, dislikes: 0, comments: 0 }
+  );
 
   return {
-    likeCount,
-    dislikeCount,
-    commentCount: feedState.comments.length,
-    comments: recentComments,
+    totals,
+    photos,
   };
 }
 
@@ -120,8 +169,8 @@ const server = http.createServer(async (req, res) => {
     try {
       const body = await readJsonBody(req);
       const action = body?.action === 'dislike' ? 'dislike' : 'like';
-      const photoUrl = typeof body.photoUrl === 'string' ? body.photoUrl : '';
-      addLike(action, photoUrl);
+      const photoUrl = typeof body.photoUrl === 'string' ? body.photoUrl : INITIAL_PHOTOS[0].url;
+      addReaction(action, photoUrl);
       sendJson(res, 201, { status: 'ok', feed: getFeed() });
     } catch (err) {
       sendJson(res, 400, { error: err.message });
@@ -133,11 +182,7 @@ const server = http.createServer(async (req, res) => {
     try {
       const body = await readJsonBody(req);
       const text = sanitizeText(String(body.text || ''));
-      if (!text) {
-        sendJson(res, 400, { error: 'Comment text is required.' });
-        return;
-      }
-      const photoUrl = typeof body.photoUrl === 'string' ? body.photoUrl : '';
+      const photoUrl = typeof body.photoUrl === 'string' ? body.photoUrl : INITIAL_PHOTOS[0].url;
       addComment(text, photoUrl);
       sendJson(res, 201, { status: 'ok', feed: getFeed() });
     } catch (err) {

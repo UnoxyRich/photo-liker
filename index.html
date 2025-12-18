@@ -1,121 +1,448 @@
 <!doctype html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<title>Photo Liker</title>
-		<style>
-/*set dark mode for browsers that support it*/
-            @media (prefers-color-scheme: dark) {
-                body {
-                    background-color: #121212;
-                    color: #e0e0e0;
-                }
-                .btn.like {
-                    background: #2ecc71;
-                    color: #121212;
-                }
-                .btn.dislike {
-                    background: #e74c3c;
-                    color: #121212;
-                }
-                .status {
-                    color: #bbbbbb;
-                }
-            }
-			html, body {
-				height: 100%;
-				margin: 0;
-			}
-			.center {
-				min-height: 100%;
-				display: flex;
-				justify-content: center; /* horizontal */
-				align-items: center;     /* vertical */
-			}
-			.photo-card {
-				text-align: center;
-			}
-			img {
-				max-width: 100%;
-				height: auto;
-				border-radius: 8px;
-				transition: opacity 240ms ease-in-out;
-				display: block;
-				margin: 0 auto;
-			}
-			.controls {
-				margin-top: 12px;
-				display: flex;
-				gap: 10px;
-				justify-content: center;
-			}
-			.btn {
-				padding: 8px 14px;
-				border: none;
-				border-radius: 6px;
-				cursor: pointer;
-				font-weight: 600;
-			}
-			.btn.like { background: #28a745; color: #fff; }
-			.btn.dislike { background: #dc3545; color: #fff; }
-			.btn:focus { outline: 3px solid rgba(0,0,0,0.12); }
-			.status {
-				margin-top: 8px;
-				color: #555;
-				font-size: 0.95rem;
-				min-height: 1.2em;
-			}   
-            /*add image shadow*/
-            img {
-                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            }
-		</style>
-	</head>
-	<body>
-		<div class="center">
-			<div class="photo-card">
-//fixed broken image link
-                <img id="photo" src="https://cdn2.thecatapi.com/images/ebv.jpg" alt="A cute cat" />
-"id":"ebv",
-"url":"https://cdn2.thecatapi.com/images/ebv.jpg",
-"width":176,"height":540,
-"breeds":[],
-"favourite":{}
-}]
-				<div class="controls" role="group" aria-label="photo actions">
-					<button id="likeBtn" class="btn like">Like</button>
-					<button id="dislikeBtn" class="btn dislike">Dislike</button>
-				</div>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Photo Liker</title>
+  <style>
+    :root {
+      --bg: linear-gradient(180deg, #0f172a 0%, #0b1224 55%, #0a1020 100%);
+      --card: rgba(255, 255, 255, 0.05);
+      --panel: rgba(255, 255, 255, 0.06);
+      --accent: #60a5fa;
+      --positive: #34d399;
+      --negative: #f87171;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --shadow: 0 18px 36px rgba(0, 0, 0, 0.35);
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
 
-				<p id="status" class="status" aria-live="polite"></p>
-			</div>
-		</div>
+    * { box-sizing: border-box; }
 
-		<script>
-			const photo = document.getElementById('photo');
-			const status = document.getElementById('status');
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      padding: 18px 14px 28px;
+    }
 
-			function nextPhoto(action) {
-				status.textContent = action === 'like' ? 'Liked — fetching new photo…' : 'Disliked — fetching new photo…';
+    .app-shell {
+      width: min(480px, 100%);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 28px;
+      padding: 18px 16px 20px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+    }
 
-				photo.style.opacity = 0;
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
 
-				const seed = Math.random().toString(36).slice(2, 9);
-				const newSrc = `https://picsum.photos/seed/${seed}/200/300`;
+    .brand {
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      font-size: 1.15rem;
+    }
 
-				const img = new Image();
-				img.onload = () => {
-					photo.src = newSrc;
+    .pill {
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--muted);
+      font-size: 0.9rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
 
-					requestAnimationFrame(() => { photo.style.opacity = 1; });
-					status.textContent = action === 'like' ? 'You liked it.' : 'You disliked it.';
-				};
-				img.src = newSrc;
-			}
+    .subline {
+      color: var(--muted);
+      margin: 0 0 12px;
+      font-size: 0.96rem;
+    }
 
-			document.getElementById('likeBtn').addEventListener('click', () => nextPhoto('like'));
-			document.getElementById('dislikeBtn').addEventListener('click', () => nextPhoto('dislike'));
-		</script>
-	</body>
+    .totals {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .total-chip {
+      flex: 1;
+      background: var(--card);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .total-chip strong { color: var(--text); }
+
+    .photo-list { display: flex; flex-direction: column; gap: 14px; }
+
+    .photo-card {
+      background: var(--card);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .photo-frame {
+      position: relative;
+      aspect-ratio: 3 / 4;
+      background: radial-gradient(circle at 20% 20%, rgba(96, 165, 250, 0.18), transparent 45%),
+                  radial-gradient(circle at 80% 0%, rgba(52, 211, 153, 0.18), transparent 45%),
+                  #0b1224;
+    }
+
+    .photo-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .tag {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.55);
+      color: #fcd34d;
+      font-weight: 700;
+      font-size: 0.85rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .card-body {
+      padding: 12px 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .activity-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .chip-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: none;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-weight: 700;
+      cursor: pointer;
+      color: #0b1224;
+      transition: transform 120ms ease, box-shadow 140ms ease;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+    }
+
+    .chip-btn:active { transform: translateY(1px) scale(0.99); }
+
+    .chip-btn.like { background: linear-gradient(145deg, #4ade80, #16a34a); color: #052e16; }
+    .chip-btn.dislike { background: linear-gradient(145deg, #fb7185, #dc2626); color: #2f060d; }
+
+    .bubble {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .stats-row {
+      display: flex;
+      gap: 10px;
+      color: var(--muted);
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .stats-row span { display: inline-flex; gap: 6px; align-items: center; }
+
+    form {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+      font-size: 1rem;
+      outline: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.18);
+    }
+
+    .send-btn {
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: none;
+      background: linear-gradient(145deg, #60a5fa, #2563eb);
+      color: #0b1224;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 10px 28px rgba(37, 99, 235, 0.35);
+    }
+
+    .comment-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .comment { background: var(--panel); border-radius: 12px; padding: 10px 12px; border: 1px solid rgba(255, 255, 255, 0.08); }
+    .comment small { color: var(--muted); display: block; margin-top: 4px; }
+
+    #status {
+      margin: 14px 4px 0;
+      min-height: 1.2em;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    #status.success { color: var(--positive); }
+    #status.error { color: var(--negative); }
+
+    @media (max-width: 520px) {
+      .app-shell { border-radius: 22px; padding: 14px 12px 16px; }
+      .chip-btn, .bubble, .send-btn { width: 100%; justify-content: center; }
+      .activity-row { flex-direction: column; align-items: stretch; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header>
+      <div class="brand">Photo Liker</div>
+      <div class="pill" aria-live="polite">
+        <span aria-hidden="true">📱</span> Mobile ready
+      </div>
+    </header>
+
+    <p class="subline">Trending photos bubble to the top based on likes, dislikes, and conversation.</p>
+
+    <div class="totals" id="totalsRow">
+      <div class="total-chip"><span>Likes</span><strong id="totalLikes">0</strong></div>
+      <div class="total-chip"><span>Dislikes</span><strong id="totalDislikes">0</strong></div>
+      <div class="total-chip"><span>Comments</span><strong id="totalComments">0</strong></div>
+    </div>
+
+    <div id="photoList" class="photo-list" aria-live="polite"></div>
+
+    <p id="status" aria-live="polite"></p>
+  </div>
+
+  <script>
+    const statusEl = document.getElementById('status');
+    const photoListEl = document.getElementById('photoList');
+    const totalLikesEl = document.getElementById('totalLikes');
+    const totalDislikesEl = document.getElementById('totalDislikes');
+    const totalCommentsEl = document.getElementById('totalComments');
+
+    let currentFeed = { photos: [], totals: { likes: 0, dislikes: 0, comments: 0 } };
+
+    function setStatus(message, tone = 'info') {
+      statusEl.textContent = message;
+      statusEl.classList.remove('success', 'error');
+      if (tone === 'success') statusEl.classList.add('success');
+      if (tone === 'error') statusEl.classList.add('error');
+    }
+
+    function formatTimestamp(ts) {
+      if (!ts) return '';
+      const date = new Date(ts);
+      return `${date.toLocaleDateString()} · ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    }
+
+    function updateTotals(totals) {
+      totalLikesEl.textContent = totals.likes ?? 0;
+      totalDislikesEl.textContent = totals.dislikes ?? 0;
+      totalCommentsEl.textContent = totals.comments ?? 0;
+    }
+
+    function buildCommentList(comments) {
+      if (!comments.length) {
+        const empty = document.createElement('p');
+        empty.style.color = 'var(--muted)';
+        empty.style.margin = '0';
+        empty.textContent = 'Be the first to comment.';
+        return [empty];
+      }
+
+      return comments.map(comment => {
+        const item = document.createElement('div');
+        item.className = 'comment';
+        const text = document.createElement('div');
+        text.textContent = comment.text;
+        const meta = document.createElement('small');
+        meta.textContent = formatTimestamp(comment.timestamp);
+        item.append(text, meta);
+        return item;
+      });
+    }
+
+    async function sendReaction(photoUrl, action) {
+      setStatus(action === 'like' ? 'Sending a thumbs up…' : 'Sending a thumbs down…');
+      try {
+        const res = await fetch('/api/like', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, photoUrl }),
+        });
+        if (!res.ok) throw new Error('Could not save your reaction.');
+        const data = await res.json();
+        renderFeed(data.feed || data);
+        setStatus(action === 'like' ? 'Saved your thumbs up.' : 'Saved your thumbs down.', 'success');
+      } catch (err) {
+        setStatus(err.message || 'Unable to react right now.', 'error');
+      }
+    }
+
+    async function sendComment(photoUrl, form, input) {
+      const text = input.value.trim();
+      if (!text) return;
+      setStatus('Posting your comment…');
+      try {
+        const res = await fetch('/api/comment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, photoUrl }),
+        });
+        if (!res.ok) throw new Error('Could not save your comment.');
+        const data = await res.json();
+        renderFeed(data.feed || data);
+        input.value = '';
+        form.dataset.expanded = 'true';
+        setStatus('Comment posted.', 'success');
+      } catch (err) {
+        setStatus(err.message || 'Unable to post comment.', 'error');
+      }
+    }
+
+    function renderFeed(feed) {
+      if (!feed) return;
+      currentFeed = feed;
+      updateTotals(feed.totals || { likes: 0, dislikes: 0, comments: 0 });
+      photoListEl.innerHTML = '';
+
+      feed.photos.forEach((photo, index) => {
+        const card = document.createElement('article');
+        card.className = 'photo-card';
+
+        const frame = document.createElement('div');
+        frame.className = 'photo-frame';
+        const img = document.createElement('img');
+        img.src = photo.url;
+        img.alt = 'Shared photo';
+        img.loading = 'lazy';
+        const tag = document.createElement('span');
+        tag.className = 'tag';
+        tag.textContent = index === 0 ? '🔥 Trending' : `Activity ${photo.activity || 0}`;
+        frame.append(img, tag);
+
+        const body = document.createElement('div');
+        body.className = 'card-body';
+
+        const activityRow = document.createElement('div');
+        activityRow.className = 'activity-row';
+
+        const likeBtn = document.createElement('button');
+        likeBtn.className = 'chip-btn like';
+        likeBtn.innerHTML = `👍 <span>${photo.likes || 0}</span>`;
+        likeBtn.addEventListener('click', () => sendReaction(photo.url, 'like'));
+
+        const dislikeBtn = document.createElement('button');
+        dislikeBtn.className = 'chip-btn dislike';
+        dislikeBtn.innerHTML = `👎 <span>${photo.dislikes || 0}</span>`;
+        dislikeBtn.addEventListener('click', () => sendReaction(photo.url, 'dislike'));
+
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        bubble.innerHTML = `💬 ${photo.comments?.length || 0}`;
+
+        activityRow.append(likeBtn, dislikeBtn, bubble);
+
+        const statsRow = document.createElement('div');
+        statsRow.className = 'stats-row';
+        statsRow.innerHTML = `
+          <span title="Total reactions">📈 ${photo.activity || 0} activity</span>
+          <span title="Positive tilt">👍 ${photo.likes} · 👎 ${photo.dislikes}</span>
+        `;
+
+        const commentList = document.createElement('div');
+        commentList.className = 'comment-list';
+        buildCommentList(photo.comments || []).forEach(node => commentList.appendChild(node));
+
+        const form = document.createElement('form');
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.name = 'comment';
+        input.placeholder = 'Drop a quick thought';
+        const sendBtn = document.createElement('button');
+        sendBtn.type = 'submit';
+        sendBtn.className = 'send-btn';
+        sendBtn.textContent = 'Send';
+        form.append(input, sendBtn);
+        form.addEventListener('submit', event => {
+          event.preventDefault();
+          sendComment(photo.url, form, input);
+        });
+
+        body.append(activityRow, statsRow, commentList, form);
+
+        card.append(frame, body);
+        photoListEl.appendChild(card);
+      });
+    }
+
+    async function loadFeed() {
+      setStatus('Syncing feed…');
+      try {
+        const res = await fetch('/api/feed');
+        if (!res.ok) throw new Error('Unable to fetch feed.');
+        const data = await res.json();
+        renderFeed(data);
+        setStatus('Showing the most active photos.');
+      } catch (err) {
+        setStatus(err.message || 'Something went wrong.', 'error');
+      }
+    }
+
+    loadFeed();
+  </script>
+</body>
 </html>
