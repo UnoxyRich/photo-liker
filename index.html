@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Photo Liker</title>
+		<style>
+			/* Center the image horizontally and vertically */
+			html, body {
+				height: 100%;
+				margin: 0;
+			}
+			.center {
+				min-height: 100%;
+				display: flex;
+				justify-content: center; /* horizontal */
+				align-items: center;     /* vertical */
+			}
+			.photo-card {
+				text-align: center;
+			}
+			img {
+				max-width: 100%;
+				height: auto;
+				border-radius: 8px;
+				transition: opacity 240ms ease-in-out;
+				display: block;
+				margin: 0 auto;
+			}
+			.controls {
+				margin-top: 12px;
+				display: flex;
+				gap: 10px;
+				justify-content: center;
+			}
+			.btn {
+				padding: 8px 14px;
+				border: none;
+				border-radius: 6px;
+				cursor: pointer;
+				font-weight: 600;
+			}
+			.btn.like { background: #28a745; color: #fff; }
+			.btn.dislike { background: #dc3545; color: #fff; }
+			.btn:focus { outline: 3px solid rgba(0,0,0,0.12); }
+			.status {
+				margin-top: 8px;
+				color: #555;
+				font-size: 0.95rem;
+				min-height: 1.2em;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="center">
+			<div class="photo-card">
+				<img id="photo" src="https://picsum.photos/200/300" alt="Random photo" />
+
+				<div class="controls" role="group" aria-label="photo actions">
+					<button id="likeBtn" class="btn like">Like</button>
+					<button id="dislikeBtn" class="btn dislike">Dislike</button>
+				</div>
+
+				<p id="status" class="status" aria-live="polite"></p>
+			</div>
+		</div>
+
+		<script>
+			const photo = document.getElementById('photo');
+			const status = document.getElementById('status');
+
+			function nextPhoto(action) {
+				status.textContent = action === 'like' ? 'Liked — fetching new photo…' : 'Disliked — fetching new photo…';
+
+				// Fade out current image
+				photo.style.opacity = 0;
+
+				// Generate a seeded URL to ensure a different image each time
+				const seed = Math.random().toString(36).slice(2, 9);
+				const newSrc = `https://picsum.photos/seed/${seed}/200/300`;
+
+				// Preload new image, then replace to avoid flash
+				const img = new Image();
+				img.onload = () => {
+					photo.src = newSrc;
+					// Fade in
+					requestAnimationFrame(() => { photo.style.opacity = 1; });
+					status.textContent = action === 'like' ? 'You liked it.' : 'You disliked it.';
+				};
+				img.src = newSrc;
+			}
+
+			document.getElementById('likeBtn').addEventListener('click', () => nextPhoto('like'));
+			document.getElementById('dislikeBtn').addEventListener('click', () => nextPhoto('dislike'));
+		</script>
+	</body>
+</html>
