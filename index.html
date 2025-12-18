@@ -5,7 +5,24 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>Photo Liker</title>
 		<style>
-			/* Center the image horizontally and vertically */
+/*set dark mode for browsers that support it*/
+            @media (prefers-color-scheme: dark) {
+                body {
+                    background-color: #121212;
+                    color: #e0e0e0;
+                }
+                .btn.like {
+                    background: #2ecc71;
+                    color: #121212;
+                }
+                .btn.dislike {
+                    background: #e74c3c;
+                    color: #121212;
+                }
+                .status {
+                    color: #bbbbbb;
+                }
+            }
 			html, body {
 				height: 100%;
 				margin: 0;
@@ -48,7 +65,11 @@
 				color: #555;
 				font-size: 0.95rem;
 				min-height: 1.2em;
-			}
+			}   
+            /*add image shadow*/
+            img {
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            }
 		</style>
 	</head>
 	<body>
@@ -72,18 +93,15 @@
 			function nextPhoto(action) {
 				status.textContent = action === 'like' ? 'Liked — fetching new photo…' : 'Disliked — fetching new photo…';
 
-				// Fade out current image
 				photo.style.opacity = 0;
 
-				// Generate a seeded URL to ensure a different image each time
 				const seed = Math.random().toString(36).slice(2, 9);
 				const newSrc = `https://picsum.photos/seed/${seed}/200/300`;
 
-				// Preload new image, then replace to avoid flash
 				const img = new Image();
 				img.onload = () => {
 					photo.src = newSrc;
-					// Fade in
+
 					requestAnimationFrame(() => { photo.style.opacity = 1; });
 					status.textContent = action === 'like' ? 'You liked it.' : 'You disliked it.';
 				};
