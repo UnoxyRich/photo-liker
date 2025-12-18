@@ -1,115 +1,483 @@
 <!doctype html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<title>Photo Liker</title>
-		<style>
-/*set dark mode for browsers that support it*/
-            @media (prefers-color-scheme: dark) {
-                body {
-                    background-color: #121212;
-                    color: #e0e0e0;
-                }
-                .btn.like {
-                    background: #2ecc71;
-                    color: #121212;
-                }
-                .btn.dislike {
-                    background: #e74c3c;
-                    color: #121212;
-                }
-                .status {
-                    color: #bbbbbb;
-                }
-            }
-			html, body {
-				height: 100%;
-				margin: 0;
-			}
-			.center {
-				min-height: 100%;
-				display: flex;
-				justify-content: center; /* horizontal */
-				align-items: center;     /* vertical */
-			}
-			.photo-card {
-				text-align: center;
-			}
-			img {
-				max-width: 100%;
-				height: auto;
-				border-radius: 8px;
-				transition: opacity 240ms ease-in-out;
-				display: block;
-				margin: 0 auto;
-			}
-			.controls {
-				margin-top: 12px;
-				display: flex;
-				gap: 10px;
-				justify-content: center;
-			}
-			.btn {
-				padding: 8px 14px;
-				border: none;
-				border-radius: 6px;
-				cursor: pointer;
-				font-weight: 600;
-			}
-			.btn.like { background: #28a745; color: #fff; }
-			.btn.dislike { background: #dc3545; color: #fff; }
-			.btn:focus { outline: 3px solid rgba(0,0,0,0.12); }
-			.status {
-				margin-top: 8px;
-				color: #555;
-				font-size: 0.95rem;
-				min-height: 1.2em;
-			}   
-            /*add image shadow*/
-            img {
-                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            }
-		</style>
-	</head>
-	<body>
-		<div class="center">
-			<div class="photo-card">
-				<img id="photo" src="https://picsum.photos/200/300" alt="Random photo" />
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cat Pulse · X-style feed</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f141a;
+      --card: #161b22;
+      --border: #263342;
+      --muted: #8b9bb4;
+      --text: #e6edf3;
+      --accent: #1d9bf0;
+      --positive: #23d160;
+      --negative: #f25f5c;
+      --shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
 
-				<div class="controls" role="group" aria-label="photo actions">
-					<button id="likeBtn" class="btn like">Like</button>
-					<button id="dislikeBtn" class="btn dislike">Dislike</button>
-				</div>
+    * { box-sizing: border-box; }
 
-				<p id="status" class="status" aria-live="polite"></p>
-			</div>
-		</div>
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+    }
 
-		<script>
-			const photo = document.getElementById('photo');
-			const status = document.getElementById('status');
+    .app {
+      width: min(560px, 100%);
+      border-left: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      min-height: 100vh;
+      background: linear-gradient(180deg, rgba(13, 17, 23, 0.95) 0%, rgba(13, 17, 23, 0.9) 100%);
+    }
 
-			function nextPhoto(action) {
-				status.textContent = action === 'like' ? 'Liked — fetching new photo…' : 'Disliked — fetching new photo…';
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(12px);
+      background: rgba(15, 20, 26, 0.92);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
 
-				photo.style.opacity = 0;
+    .logo {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      letter-spacing: -0.06em;
+      font-size: 1.4rem;
+      color: #0b0f14;
+      background: linear-gradient(145deg, #ffffff, #c7d2fe);
+      box-shadow: var(--shadow);
+    }
 
-				const seed = Math.random().toString(36).slice(2, 9);
-				const newSrc = `https://picsum.photos/seed/${seed}/200/300`;
+    .headline { font-weight: 800; letter-spacing: -0.01em; }
+    .subline { color: var(--muted); margin: 0; font-size: 0.95rem; }
 
-				const img = new Image();
-				img.onload = () => {
-					photo.src = newSrc;
+    .totals {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      padding: 10px 12px 6px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(13, 17, 23, 0.92);
+    }
 
-					requestAnimationFrame(() => { photo.style.opacity = 1; });
-					status.textContent = action === 'like' ? 'You liked it.' : 'You disliked it.';
-				};
-				img.src = newSrc;
-			}
+    .total-chip {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--muted);
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
 
-			document.getElementById('likeBtn').addEventListener('click', () => nextPhoto('like'));
-			document.getElementById('dislikeBtn').addEventListener('click', () => nextPhoto('dislike'));
-		</script>
-	</body>
+    main { padding: 8px 0 32px; }
+
+    .tweet-card {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 10px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(22, 27, 34, 0.8);
+    }
+
+    .avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #1d9bf0, #7dd3fc);
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      color: #0b1118;
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+      overflow: hidden;
+    }
+
+    .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    .card-body { display: flex; flex-direction: column; gap: 8px; }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+    }
+
+    .handle { color: var(--muted); font-weight: 600; }
+    .timestamp { color: var(--muted); font-size: 0.9rem; }
+
+    .text { margin: 2px 0 0; line-height: 1.5; }
+
+    .media {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      background: #0d1117;
+    }
+
+    .media img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      color: var(--muted);
+      font-weight: 700;
+      margin-top: 2px;
+    }
+
+    .pill-btn {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 9px 10px;
+      background: rgba(255, 255, 255, 0.02);
+      color: inherit;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      font-weight: 700;
+      transition: transform 120ms ease, border-color 140ms ease, background 140ms ease;
+    }
+
+    .pill-btn:hover { border-color: rgba(29, 155, 240, 0.5); background: rgba(29, 155, 240, 0.08); }
+    .pill-btn:active { transform: translateY(1px); }
+    .pill-btn.like { color: #9ae6b4; }
+    .pill-btn.dislike { color: #fca5a5; }
+
+    .stats {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 0.95rem;
+      flex-wrap: wrap;
+    }
+
+    .comment-list { display: flex; flex-direction: column; gap: 8px; }
+    .comment { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 8px 10px; }
+    .comment small { color: var(--muted); display: block; margin-top: 4px; }
+
+    form { display: flex; gap: 8px; }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 11px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--text);
+      outline: none;
+      font-size: 1rem;
+    }
+
+    input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(29, 155, 240, 0.18); }
+
+    .send-btn {
+      border: none;
+      background: linear-gradient(145deg, #1d9bf0, #4ade80);
+      color: #0b1118;
+      font-weight: 800;
+      padding: 0 14px;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 10px 26px rgba(29, 155, 240, 0.25);
+    }
+
+    #status { padding: 10px 16px; color: var(--muted); font-size: 0.95rem; min-height: 1.2em; }
+    #status.success { color: var(--positive); }
+    #status.error { color: var(--negative); }
+
+    .sentinel { height: 48px; display: grid; place-items: center; color: var(--muted); font-size: 0.95rem; }
+
+    @media (max-width: 560px) {
+      header { padding: 12px 14px; }
+      .tweet-card { padding: 12px 14px; grid-template-columns: auto 1fr; }
+      .actions { grid-template-columns: repeat(3, 1fr); }
+      .totals { grid-template-columns: repeat(3, 1fr); padding: 10px 10px 6px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="logo" aria-hidden="true">X</div>
+      <div>
+        <div class="headline">Cat Pulse</div>
+        <p class="subline">Live cat energy · tap to react & chat</p>
+      </div>
+    </header>
+
+    <div class="totals" aria-live="polite">
+      <div class="total-chip"><span>Likes</span><strong id="totalLikes">0</strong></div>
+      <div class="total-chip"><span>Dislikes</span><strong id="totalDislikes">0</strong></div>
+      <div class="total-chip"><span>Comments</span><strong id="totalComments">0</strong></div>
+    </div>
+
+    <main id="timeline" aria-live="polite"></main>
+    <div class="sentinel" id="scrollSentinel">Loading more cats…</div>
+    <p id="status" aria-live="polite"></p>
+  </div>
+
+  <script>
+    const timelineEl = document.getElementById('timeline');
+    const sentinel = document.getElementById('scrollSentinel');
+    const statusEl = document.getElementById('status');
+    const totalLikesEl = document.getElementById('totalLikes');
+    const totalDislikesEl = document.getElementById('totalDislikes');
+    const totalCommentsEl = document.getElementById('totalComments');
+
+    let cursor = 0;
+    const PAGE_SIZE = 6;
+    let loading = false;
+    let observer;
+
+    function setStatus(message, tone = 'info') {
+      statusEl.textContent = message;
+      statusEl.classList.remove('success', 'error');
+      if (tone === 'success') statusEl.classList.add('success');
+      if (tone === 'error') statusEl.classList.add('error');
+    }
+
+    function formatTimestamp(ts) {
+      if (!ts) return '';
+      const date = new Date(ts);
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function updateTotals(totals) {
+      totalLikesEl.textContent = totals.likes ?? 0;
+      totalDislikesEl.textContent = totals.dislikes ?? 0;
+      totalCommentsEl.textContent = totals.comments ?? 0;
+    }
+
+    function createAvatar(letter) {
+      const avatar = document.createElement('div');
+      avatar.className = 'avatar';
+      const img = document.createElement('img');
+      img.src = `https://unavatar.io/kitty/${letter}`;
+      img.alt = 'Cat avatar';
+      img.loading = 'lazy';
+      avatar.appendChild(img);
+      return avatar;
+    }
+
+    function buildCommentList(photo) {
+      const list = document.createElement('div');
+      list.className = 'comment-list';
+      if (!photo.comments?.length) {
+        const empty = document.createElement('p');
+        empty.style.color = 'var(--muted)';
+        empty.style.margin = '0';
+        empty.textContent = 'Be the first to comment.';
+        list.appendChild(empty);
+        return list;
+      }
+
+      photo.comments.forEach(comment => {
+        const item = document.createElement('div');
+        item.className = 'comment';
+        const text = document.createElement('div');
+        text.textContent = comment.text;
+        const meta = document.createElement('small');
+        meta.textContent = formatTimestamp(comment.timestamp);
+        item.append(text, meta);
+        list.appendChild(item);
+      });
+      return list;
+    }
+
+    function updateCardFromPhoto(photo) {
+      const card = document.querySelector(`[data-photo-id="${photo.id}"]`);
+      if (!card) return;
+      card.querySelector('.like-count').textContent = photo.likes ?? 0;
+      card.querySelector('.dislike-count').textContent = photo.dislikes ?? 0;
+      card.querySelector('.comment-count').textContent = photo.comments?.length ?? 0;
+      card.querySelector('.activity-count').textContent = photo.activity ?? 0;
+
+      const commentMount = card.querySelector('.comment-list');
+      commentMount.replaceWith(buildCommentList(photo));
+    }
+
+    async function sendReaction(photoId, action) {
+      setStatus(action === 'like' ? 'Saving your like…' : 'Saving your dislike…');
+      try {
+        const res = await fetch('/api/like', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, photoId }),
+        });
+        if (!res.ok) throw new Error('Could not save your reaction.');
+        const data = await res.json();
+        if (data.photo) updateCardFromPhoto(data.photo);
+        if (data.totals) updateTotals(data.totals);
+        setStatus(action === 'like' ? 'Liked.' : 'Disliked.', 'success');
+      } catch (err) {
+        setStatus(err.message || 'Unable to react right now.', 'error');
+      }
+    }
+
+    async function sendComment(photoId, form, input) {
+      const text = input.value.trim();
+      if (!text) return;
+      setStatus('Posting your comment…');
+      try {
+        const res = await fetch('/api/comment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, photoId }),
+        });
+        if (!res.ok) throw new Error('Could not save your comment.');
+        const data = await res.json();
+        if (data.photo) updateCardFromPhoto(data.photo);
+        if (data.totals) updateTotals(data.totals);
+        input.value = '';
+        setStatus('Comment posted.', 'success');
+      } catch (err) {
+        setStatus(err.message || 'Unable to post comment.', 'error');
+      }
+    }
+
+    function buildCard(photo, index) {
+      const article = document.createElement('article');
+      article.className = 'tweet-card';
+      article.dataset.photoId = photo.id;
+
+      const avatar = createAvatar((photo.id || 'cat').slice(-2));
+
+      const body = document.createElement('div');
+      body.className = 'card-body';
+
+      const head = document.createElement('div');
+      head.className = 'card-head';
+      head.innerHTML = `<span>Cat Pulse</span><span class="handle">@gifcats</span>·<span class="timestamp">${formatTimestamp(photo.updatedAt)}</span>`;
+
+      const text = document.createElement('p');
+      text.className = 'text';
+      text.textContent = `Looping cat drop #${index + 1} · react and keep it alive.`;
+
+      const media = document.createElement('div');
+      media.className = 'media';
+      const img = document.createElement('img');
+      img.src = photo.url;
+      img.alt = 'Cat gif';
+      img.loading = 'lazy';
+      media.appendChild(img);
+
+      const stats = document.createElement('div');
+      stats.className = 'stats';
+      stats.innerHTML = `<span title="Total reactions">📊 <span class="activity-count">${photo.activity || 0}</span> activity</span>`;
+
+      const actions = document.createElement('div');
+      actions.className = 'actions';
+
+      const likeBtn = document.createElement('button');
+      likeBtn.className = 'pill-btn like';
+      likeBtn.innerHTML = `👍 <span class="like-count">${photo.likes || 0}</span>`;
+      likeBtn.addEventListener('click', () => sendReaction(photo.id, 'like'));
+
+      const dislikeBtn = document.createElement('button');
+      dislikeBtn.className = 'pill-btn dislike';
+      dislikeBtn.innerHTML = `👎 <span class="dislike-count">${photo.dislikes || 0}</span>`;
+      dislikeBtn.addEventListener('click', () => sendReaction(photo.id, 'dislike'));
+
+      const commentBtn = document.createElement('div');
+      commentBtn.className = 'pill-btn';
+      commentBtn.innerHTML = `💬 <span class="comment-count">${photo.comments?.length || 0}</span>`;
+
+      actions.append(likeBtn, dislikeBtn, commentBtn);
+
+      const commentList = buildCommentList(photo);
+
+      const form = document.createElement('form');
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.name = 'comment';
+      input.placeholder = 'Reply with your vibe';
+      const sendBtn = document.createElement('button');
+      sendBtn.type = 'submit';
+      sendBtn.className = 'send-btn';
+      sendBtn.textContent = 'Post';
+      form.append(input, sendBtn);
+      form.addEventListener('submit', event => {
+        event.preventDefault();
+        sendComment(photo.id, form, input);
+      });
+
+      body.append(head, text, media, stats, actions, commentList, form);
+      article.append(avatar, body);
+      return article;
+    }
+
+    async function loadFeed(reset = false) {
+      if (loading) return;
+      loading = true;
+      setStatus('Refreshing cats…');
+      try {
+        const res = await fetch(`/api/feed?cursor=${reset ? 0 : cursor}&limit=${PAGE_SIZE}`);
+        if (!res.ok) throw new Error('Unable to fetch feed.');
+        const data = await res.json();
+        if (reset) {
+          timelineEl.innerHTML = '';
+          cursor = 0;
+        }
+
+        data.photos?.forEach((photo, index) => {
+          timelineEl.appendChild(buildCard(photo, cursor + index));
+        });
+
+        if (data.totals) updateTotals(data.totals);
+        cursor = data.nextCursor ?? cursor + PAGE_SIZE;
+        setStatus('Showing infinite cat scroll.');
+      } catch (err) {
+        setStatus(err.message || 'Something went wrong.', 'error');
+      } finally {
+        loading = false;
+      }
+    }
+
+    function initInfiniteScroll() {
+      observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            loadFeed();
+          }
+        });
+      }, { rootMargin: '600px' });
+
+      observer.observe(sentinel);
+    }
+
+    loadFeed(true);
+    initInfiniteScroll();
+  </script>
+</body>
 </html>
