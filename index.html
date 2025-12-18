@@ -279,11 +279,11 @@
       totalCommentsEl.textContent = totals.comments ?? 0;
     }
 
-    function createAvatar(letter) {
+    function createAvatar(seed = 'cat') {
       const avatar = document.createElement('div');
       avatar.className = 'avatar';
       const img = document.createElement('img');
-      img.src = `https://unavatar.io/kitty/${letter}`;
+      img.src = `https://api.dicebear.com/7.x/thumbs/svg?seed=${encodeURIComponent(seed)}`;
       img.alt = 'Cat avatar';
       img.loading = 'lazy';
       avatar.appendChild(img);
@@ -371,7 +371,7 @@
       article.className = 'tweet-card';
       article.dataset.photoId = photo.id;
 
-      const avatar = createAvatar((photo.id || 'cat').slice(-2));
+      const avatar = createAvatar(photo.avatarSeed || (photo.id || 'cat').slice(-2));
 
       const body = document.createElement('div');
       body.className = 'card-body';

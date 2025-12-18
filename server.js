@@ -16,9 +16,11 @@ const MAX_COMMENT_LENGTH = 240;
 const DEFAULT_PAGE_SIZE = 8;
 
 function createPhoto() {
+  const uniqueSeed = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   return {
     id: `cat-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
-    url: CAT_URL,
+    url: `${CAT_URL}?unique=${uniqueSeed}`,
+    avatarSeed: uniqueSeed,
     likes: 0,
     dislikes: 0,
     comments: [],
