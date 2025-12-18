@@ -1,115 +1,422 @@
 <!doctype html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<title>Photo Liker</title>
-		<style>
-/*set dark mode for browsers that support it*/
-            @media (prefers-color-scheme: dark) {
-                body {
-                    background-color: #121212;
-                    color: #e0e0e0;
-                }
-                .btn.like {
-                    background: #2ecc71;
-                    color: #121212;
-                }
-                .btn.dislike {
-                    background: #e74c3c;
-                    color: #121212;
-                }
-                .status {
-                    color: #bbbbbb;
-                }
-            }
-			html, body {
-				height: 100%;
-				margin: 0;
-			}
-			.center {
-				min-height: 100%;
-				display: flex;
-				justify-content: center; /* horizontal */
-				align-items: center;     /* vertical */
-			}
-			.photo-card {
-				text-align: center;
-			}
-			img {
-				max-width: 100%;
-				height: auto;
-				border-radius: 8px;
-				transition: opacity 240ms ease-in-out;
-				display: block;
-				margin: 0 auto;
-			}
-			.controls {
-				margin-top: 12px;
-				display: flex;
-				gap: 10px;
-				justify-content: center;
-			}
-			.btn {
-				padding: 8px 14px;
-				border: none;
-				border-radius: 6px;
-				cursor: pointer;
-				font-weight: 600;
-			}
-			.btn.like { background: #28a745; color: #fff; }
-			.btn.dislike { background: #dc3545; color: #fff; }
-			.btn:focus { outline: 3px solid rgba(0,0,0,0.12); }
-			.status {
-				margin-top: 8px;
-				color: #555;
-				font-size: 0.95rem;
-				min-height: 1.2em;
-			}   
-            /*add image shadow*/
-            img {
-                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            }
-		</style>
-	</head>
-	<body>
-		<div class="center">
-			<div class="photo-card">
-				<img id="photo" src="https://picsum.photos/200/300" alt="Random photo" />
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Photo Liker</title>
+  <style>
+    :root {
+      --bg: linear-gradient(180deg, #0f172a 0%, #111827 40%, #0b1224 100%);
+      --card: rgba(255, 255, 255, 0.06);
+      --accent: #60a5fa;
+      --positive: #34d399;
+      --negative: #f87171;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
 
-				<div class="controls" role="group" aria-label="photo actions">
-					<button id="likeBtn" class="btn like">Like</button>
-					<button id="dislikeBtn" class="btn dislike">Dislike</button>
-				</div>
+    * { box-sizing: border-box; }
 
-				<p id="status" class="status" aria-live="polite"></p>
-			</div>
-		</div>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+    }
 
-		<script>
-			const photo = document.getElementById('photo');
-			const status = document.getElementById('status');
+    .app-shell {
+      width: min(420px, 100%);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 28px;
+      padding: 18px 18px 10px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
 
-			function nextPhoto(action) {
-				status.textContent = action === 'like' ? 'Liked — fetching new photo…' : 'Disliked — fetching new photo…';
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
 
-				photo.style.opacity = 0;
+    .brand {
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      font-size: 1.15rem;
+    }
 
-				const seed = Math.random().toString(36).slice(2, 9);
-				const newSrc = `https://picsum.photos/seed/${seed}/200/300`;
+    .pill {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
 
-				const img = new Image();
-				img.onload = () => {
-					photo.src = newSrc;
+    .photo-card {
+      position: relative;
+      overflow: hidden;
+      border-radius: 20px;
+      background: #0b1224;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: var(--shadow);
+      margin-bottom: 14px;
+    }
 
-					requestAnimationFrame(() => { photo.style.opacity = 1; });
-					status.textContent = action === 'like' ? 'You liked it.' : 'You disliked it.';
-				};
-				img.src = newSrc;
-			}
+    .photo-frame {
+      position: relative;
+      aspect-ratio: 3 / 4;
+      background: radial-gradient(circle at 20% 20%, rgba(96, 165, 250, 0.18), transparent 45%),
+                  radial-gradient(circle at 80% 0%, rgba(52, 211, 153, 0.18), transparent 45%),
+                  #0b1224;
+    }
 
-			document.getElementById('likeBtn').addEventListener('click', () => nextPhoto('like'));
-			document.getElementById('dislikeBtn').addEventListener('click', () => nextPhoto('dislike'));
-		</script>
-	</body>
+    #photo {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      border-radius: 16px;
+      transition: opacity 220ms ease-in-out, transform 220ms ease-in-out;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+    }
+
+    #photo.fading {
+      opacity: 0;
+      transform: scale(0.98);
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      padding: 14px 14px 16px;
+      background: rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(12px);
+    }
+
+    .btn {
+      flex: 1;
+      padding: 14px 12px;
+      border: none;
+      border-radius: 12px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      color: #0b1224;
+      cursor: pointer;
+      transition: transform 120ms ease, box-shadow 120ms ease, filter 160ms ease;
+      box-shadow: 0 14px 35px rgba(0, 0, 0, 0.25);
+    }
+
+    .btn:active {
+      transform: translateY(1px) scale(0.99);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.22);
+    }
+
+    .btn.like { background: linear-gradient(145deg, #4ade80, #16a34a); color: #052e16; }
+    .btn.dislike { background: linear-gradient(145deg, #fb7185, #dc2626); color: #2f060d; }
+
+    .status {
+      margin: 6px 0 10px;
+      min-height: 1.3em;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .status.success { color: var(--positive); }
+    .status.error { color: var(--negative); }
+
+    .panel {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 18px;
+      padding: 14px 12px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .stat {
+      padding: 12px 10px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.06);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .stat strong { color: var(--text); font-size: 1.15rem; }
+
+    form {
+      margin-bottom: 10px;
+    }
+
+    label {
+      font-size: 0.9rem;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+      font-size: 1rem;
+      outline: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.18);
+    }
+
+    .send-btn {
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: none;
+      background: linear-gradient(145deg, #60a5fa, #2563eb);
+      color: #0b1224;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 10px 28px rgba(37, 99, 235, 0.35);
+    }
+
+    .comment-list {
+      max-height: 220px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding-right: 2px;
+    }
+
+    .comment {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 14px;
+      padding: 10px 12px;
+    }
+
+    .comment small {
+      color: var(--muted);
+      display: block;
+      margin-top: 4px;
+    }
+
+    @media (max-width: 480px) {
+      body { padding: 12px; }
+      .controls { flex-direction: column; }
+      .btn { width: 100%; }
+      .stats { grid-template-columns: 1fr; }
+      .app-shell { border-radius: 24px; padding: 14px 12px 8px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header>
+      <div class="brand">Photo Liker</div>
+      <div class="pill" aria-live="polite">Live feedback</div>
+    </header>
+
+    <div class="photo-card">
+      <div class="photo-frame">
+        <img id="photo" src="https://picsum.photos/seed/first/360/480" alt="Random photo" />
+      </div>
+      <div class="controls" role="group" aria-label="photo actions">
+        <button id="likeBtn" class="btn like">Like</button>
+        <button id="dislikeBtn" class="btn dislike">Dislike</button>
+      </div>
+    </div>
+
+    <p id="status" class="status" aria-live="polite"></p>
+
+    <div class="panel" aria-label="Feedback panel">
+      <div class="stats">
+        <div class="stat">
+          <span>Likes</span>
+          <strong id="likeCount">0</strong>
+        </div>
+        <div class="stat">
+          <span>Dislikes</span>
+          <strong id="dislikeCount">0</strong>
+        </div>
+      </div>
+
+      <form id="commentForm">
+        <label for="commentInput">Leave a quick reaction</label>
+        <div class="input-row">
+          <input id="commentInput" type="text" name="comment" placeholder="Add a comment" autocomplete="off" />
+          <button class="send-btn" type="submit">Send</button>
+        </div>
+      </form>
+
+      <div class="comment-list" id="commentList" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <script>
+    const photo = document.getElementById('photo');
+    const statusEl = document.getElementById('status');
+    const likeCountEl = document.getElementById('likeCount');
+    const dislikeCountEl = document.getElementById('dislikeCount');
+    const commentListEl = document.getElementById('commentList');
+    const commentForm = document.getElementById('commentForm');
+    const commentInput = document.getElementById('commentInput');
+
+    let currentPhotoUrl = photo.src;
+
+    function setStatus(message, tone = 'info') {
+      statusEl.textContent = message;
+      statusEl.classList.remove('success', 'error');
+      if (tone === 'success') statusEl.classList.add('success');
+      if (tone === 'error') statusEl.classList.add('error');
+    }
+
+    function buildPhotoUrl() {
+      const seed = Math.random().toString(36).slice(2, 10);
+      return `https://picsum.photos/seed/${seed}/360/480`;
+    }
+
+    function swapPhoto() {
+      return new Promise(resolve => {
+        const newSrc = buildPhotoUrl();
+        const img = new Image();
+        img.onload = () => {
+          photo.classList.add('fading');
+          requestAnimationFrame(() => {
+            photo.src = newSrc;
+            currentPhotoUrl = newSrc;
+            photo.classList.remove('fading');
+            resolve();
+          });
+        };
+        img.src = newSrc;
+      });
+    }
+
+    async function updateFeedFromResponse(response) {
+      if (!response) return;
+      const feed = response.feed || response;
+      updateFeed(feed);
+    }
+
+    function updateFeed(feed) {
+      if (!feed) return;
+      likeCountEl.textContent = feed.likeCount ?? 0;
+      dislikeCountEl.textContent = feed.dislikeCount ?? 0;
+      renderComments(feed.comments || []);
+    }
+
+    function renderComments(comments) {
+      if (!comments.length) {
+        commentListEl.innerHTML = '<p style="color: var(--muted); margin: 0;">No comments yet. Be first!</p>';
+        return;
+      }
+
+      commentListEl.innerHTML = '';
+      comments.forEach(comment => {
+        const item = document.createElement('div');
+        item.className = 'comment';
+        const text = document.createElement('div');
+        text.textContent = comment.text;
+        const meta = document.createElement('small');
+        meta.textContent = formatTimestamp(comment.timestamp);
+        item.appendChild(text);
+        item.appendChild(meta);
+        commentListEl.appendChild(item);
+      });
+    }
+
+    function formatTimestamp(ts) {
+      if (!ts) return '';
+      const date = new Date(ts);
+      return `${date.toLocaleDateString()} · ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    }
+
+    async function recordLike(action) {
+      try {
+        const res = await fetch('/api/like', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, photoUrl: currentPhotoUrl }),
+        });
+        if (!res.ok) throw new Error('Could not save your reaction.');
+        const data = await res.json();
+        await updateFeedFromResponse(data);
+        setStatus(action === 'like' ? 'Saved your like.' : 'Saved your dislike.', 'success');
+      } catch (err) {
+        setStatus(err.message || 'Something went wrong.', 'error');
+      }
+    }
+
+    async function handleReaction(action) {
+      setStatus(action === 'like' ? 'Liking…' : 'Skipping…');
+      await recordLike(action);
+      await swapPhoto();
+    }
+
+    async function loadFeed() {
+      try {
+        const res = await fetch('/api/feed');
+        if (!res.ok) throw new Error('Unable to fetch feed.');
+        const data = await res.json();
+        updateFeed(data);
+        setStatus('Feed synced.');
+      } catch (err) {
+        setStatus(err.message, 'error');
+      }
+    }
+
+    async function submitComment(event) {
+      event.preventDefault();
+      const text = commentInput.value.trim();
+      if (!text) return;
+
+      try {
+        const res = await fetch('/api/comment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, photoUrl: currentPhotoUrl }),
+        });
+        if (!res.ok) throw new Error('Could not save your comment.');
+        const data = await res.json();
+        updateFeedFromResponse(data);
+        commentInput.value = '';
+        setStatus('Comment posted!', 'success');
+      } catch (err) {
+        setStatus(err.message || 'Unable to post comment.', 'error');
+      }
+    }
+
+    document.getElementById('likeBtn').addEventListener('click', () => handleReaction('like'));
+    document.getElementById('dislikeBtn').addEventListener('click', () => handleReaction('dislike'));
+    commentForm.addEventListener('submit', submitComment);
+
+    loadFeed();
+  </script>
+</body>
 </html>
