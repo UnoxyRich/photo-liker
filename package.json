@@ -1,0 +1,13 @@
+{
+  "name": "photo-liker",
+  "version": "1.0.0",
+  "description": "Simple photo liker with feedback server",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT"
+}
