@@ -4,28 +4,35 @@ const path = require('path');
 
 const PORT = process.env.PORT || 3000;
 
-const INITIAL_PHOTOS = [
-  {
-    url: 'https://cdn2.thecatapi.com/images/ebv.jpg',
-    width: 176,
-    height: 540,
-  },
-  { url: 'https://picsum.photos/seed/horizon/600/800' },
-  { url: 'https://picsum.photos/seed/moonlit/600/800' },
-];
+const CAT_URL = 'https://cataas.com/cat/gif';
+const INITIAL_PHOTO_COUNT = 18;
 
 const feedState = {
-  photos: INITIAL_PHOTOS.map(photo => ({
-    ...photo,
-    likes: 0,
-    dislikes: 0,
-    comments: [],
-    updatedAt: Date.now(),
-  })),
+  photos: [],
 };
 
 const MAX_COMMENTS_PER_PHOTO = 80;
 const MAX_COMMENT_LENGTH = 240;
+const DEFAULT_PAGE_SIZE = 8;
+
+function createPhoto() {
+  return {
+    id: `cat-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    url: CAT_URL,
+    likes: 0,
+    dislikes: 0,
+    comments: [],
+    updatedAt: Date.now(),
+  };
+}
+
+function ensurePhotos(minCount) {
+  while (feedState.photos.length < minCount) {
+    feedState.photos.push(createPhoto());
+  }
+}
+
+ensurePhotos(INITIAL_PHOTO_COUNT);
 
 function readJsonBody(req) {
   return new Promise((resolve, reject) => {
@@ -60,42 +67,39 @@ function sanitizeText(text) {
   return text.replace(/\s+/g, ' ').trim().slice(0, MAX_COMMENT_LENGTH);
 }
 
-function getOrCreatePhoto(photoUrl) {
-  const existing = feedState.photos.find(photo => photo.url === photoUrl);
+function getOrCreatePhoto(photoId) {
+  if (!photoId) return feedState.photos[0];
+  const existing = feedState.photos.find(photo => photo.id === photoId);
   if (existing) return existing;
 
-  const photo = {
-    url: photoUrl,
-    likes: 0,
-    dislikes: 0,
-    comments: [],
-    updatedAt: Date.now(),
-  };
-  feedState.photos.push(photo);
+  const photo = createPhoto();
+  photo.id = photoId;
+  feedState.photos.unshift(photo);
   return photo;
 }
 
-function addReaction(action, photoUrl) {
-  const photo = getOrCreatePhoto(photoUrl || INITIAL_PHOTOS[0].url);
+function addReaction(action, photoId) {
+  const photo = getOrCreatePhoto(photoId);
   if (action === 'dislike') {
     photo.dislikes += 1;
   } else {
     photo.likes += 1;
   }
   photo.updatedAt = Date.now();
+  return photo;
 }
 
-function addComment(text, photoUrl) {
+function addComment(text, photoId) {
   const cleanText = sanitizeText(text);
   if (!cleanText) {
     throw new Error('Comment text is required.');
   }
 
-  const photo = getOrCreatePhoto(photoUrl || INITIAL_PHOTOS[0].url);
+  const photo = getOrCreatePhoto(photoId);
   const entry = {
     id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
     text: cleanText,
-    photoUrl: photo.url,
+    photoId: photo.id,
     timestamp: new Date().toISOString(),
   };
   photo.comments.push(entry);
@@ -103,21 +107,11 @@ function addComment(text, photoUrl) {
     photo.comments.shift();
   }
   photo.updatedAt = Date.now();
+  return photo;
 }
 
-function getFeed() {
-  const photos = [...feedState.photos]
-    .map(photo => ({
-      ...photo,
-      activity: photo.likes + photo.dislikes + photo.comments.length,
-      comments: [...photo.comments].slice(-5).reverse(),
-    }))
-    .sort((a, b) => {
-      if (b.activity === a.activity) return b.updatedAt - a.updatedAt;
-      return b.activity - a.activity;
-    });
-
-  const totals = photos.reduce(
+function computeTotals(photos = feedState.photos) {
+  return photos.reduce(
     (acc, photo) => {
       acc.likes += photo.likes;
       acc.dislikes += photo.dislikes;
@@ -126,10 +120,32 @@ function getFeed() {
     },
     { likes: 0, dislikes: 0, comments: 0 }
   );
+}
+
+function serializePhoto(photo) {
+  return {
+    ...photo,
+    activity: photo.likes + photo.dislikes + photo.comments.length,
+    comments: [...photo.comments].slice(-6).reverse(),
+  };
+}
+
+function getFeed({ cursor = 0, limit = DEFAULT_PAGE_SIZE } = {}) {
+  ensurePhotos(cursor + limit + 2);
+
+  const ordered = [...feedState.photos].sort((a, b) => {
+    const activityA = a.likes + a.dislikes + a.comments.length;
+    const activityB = b.likes + b.dislikes + b.comments.length;
+    if (activityB === activityA) return b.updatedAt - a.updatedAt;
+    return activityB - activityA;
+  });
+
+  const photos = ordered.slice(cursor, cursor + limit).map(serializePhoto);
 
   return {
-    totals,
+    totals: computeTotals(ordered),
     photos,
+    nextCursor: cursor + limit,
   };
 }
 
@@ -169,9 +185,9 @@ const server = http.createServer(async (req, res) => {
     try {
       const body = await readJsonBody(req);
       const action = body?.action === 'dislike' ? 'dislike' : 'like';
-      const photoUrl = typeof body.photoUrl === 'string' ? body.photoUrl : INITIAL_PHOTOS[0].url;
-      addReaction(action, photoUrl);
-      sendJson(res, 201, { status: 'ok', feed: getFeed() });
+      const photoId = typeof body.photoId === 'string' ? body.photoId : undefined;
+      const photo = addReaction(action, photoId);
+      sendJson(res, 201, { status: 'ok', photo: serializePhoto(photo), totals: computeTotals() });
     } catch (err) {
       sendJson(res, 400, { error: err.message });
     }
@@ -182,9 +198,9 @@ const server = http.createServer(async (req, res) => {
     try {
       const body = await readJsonBody(req);
       const text = sanitizeText(String(body.text || ''));
-      const photoUrl = typeof body.photoUrl === 'string' ? body.photoUrl : INITIAL_PHOTOS[0].url;
-      addComment(text, photoUrl);
-      sendJson(res, 201, { status: 'ok', feed: getFeed() });
+      const photoId = typeof body.photoId === 'string' ? body.photoId : undefined;
+      const photo = addComment(text, photoId);
+      sendJson(res, 201, { status: 'ok', photo: serializePhoto(photo), totals: computeTotals() });
     } catch (err) {
       sendJson(res, 400, { error: err.message });
     }
@@ -192,7 +208,9 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (parsedUrl.pathname === '/api/feed' && req.method === 'GET') {
-    sendJson(res, 200, getFeed());
+    const cursor = Number(parsedUrl.searchParams.get('cursor')) || 0;
+    const limit = Number(parsedUrl.searchParams.get('limit')) || DEFAULT_PAGE_SIZE;
+    sendJson(res, 200, getFeed({ cursor, limit }));
     return;
   }
 
